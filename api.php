@@ -9,7 +9,7 @@ const DECK_BASE = [
   'あ','い','う','え','お','か','き','く','け','こ',
   'さ','し','す','せ','そ','た','ち','つ','て','と',
   'な','に','ぬ','ね','の','は','ひ','ふ','へ','ほ',
-  'ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ','を'
+  'ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ'
 ];
 
 $DATA_DIR = __DIR__ . '/data/rooms';
@@ -46,6 +46,10 @@ function create_deck(): array {
     for ($i = 0; $i < 3; $i++) $deck = array_merge($deck, DECK_BASE);
     shuffle($deck);
     return $deck;
+}
+
+function random_char_card(): string {
+    return DECK_BASE[random_int(0, count(DECK_BASE) - 1)];
 }
 
 function public_state(array $room, string $forPlayerId): array {
@@ -240,6 +244,13 @@ $result = with_room_lock($roomPath, function (&$room) use ($action, $payload) {
         $state['lastAction'] = null;
         $state['stateVersion']++;
 
+        return ['ok' => true, 'mutated' => true, 'roomState' => public_state($room, $playerId)];
+    }
+
+    if ($action === 'shuffle_field') {
+        $state['currentChar'] = random_char_card();
+        $state['lastAction'] = null;
+        $state['stateVersion']++;
         return ['ok' => true, 'mutated' => true, 'roomState' => public_state($room, $playerId)];
     }
 

@@ -29,7 +29,7 @@
     .app-title {
       font-weight: 900;
       color: var(--wb-red);
-      text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(33, 81, 200, 0.35);
+      text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(33, 81, 200, 0.22);
     }
     .glass-btn {
       background: linear-gradient(135deg, var(--wb-red), var(--wb-orange-deep));
@@ -68,7 +68,7 @@
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 8px 14px rgba(111, 61, 0, .18);
-      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
     }
     .char-card:hover { transform: translateY(-3px); box-shadow: 0 10px 16px rgba(111, 61, 0, .22); }
     .char-card.selected {
@@ -91,8 +91,9 @@
       gap: 10px;
       flex-wrap: nowrap;
       padding: 8px;
+      width: fit-content;
+      margin: 0 auto;
     }
-    .hand-scroll.five-cards { justify-content: space-between; }
     .small-player { font-size: 0.9rem; }
     #toastBox { position: fixed; right: 12px; bottom: 12px; z-index: 9999; min-width: 220px; }
     #playBtn { min-height: 56px; font-size: 1.06rem; font-weight: 700; }
@@ -121,6 +122,12 @@
       border-radius: 3px;
       z-index: 12001;
       pointer-events: none;
+    }
+    #helpBtn {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      padding: 0;
     }
   </style>
 </head>
@@ -175,7 +182,9 @@
         </div>
         <div id="lastPlay" class="small text-muted">まだ成功プレイはありません</div>
         <div class="d-flex gap-2">
-          <button id="undoBtn" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+          <button id="helpBtn" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal" aria-label="ルール説明"><i class="fa-solid fa-circle-question"></i></button>
+          <button id="undoBtn" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate-left"></i> 出したカードを手札に戻す</button>
+          <button id="shuffleFieldBtn" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-shuffle"></i> 場をシャッフル</button>
           <button id="leaveBtn" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-right-from-bracket"></i> 退室</button>
         </div>
       </div>
@@ -200,11 +209,30 @@
       <div id="handBox" class="hand-scroll"></div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="playPanel">
       <div class="small mb-2">選択中カード: <span id="selectedCharLabel" class="fw-bold">未選択</span></div>
       <button id="playBtn" class="btn btn-success w-100">決定（場に出す）</button>
     </div>
   </section>
+</div>
+
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalLabel">ルール（かんたん版）</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="mb-0 ps-3">
+          <li>手札から1枚を選び、「決定（場に出す）」で場に出します。</li>
+          <li>先に手札を0枚にしたプレイヤーが勝利です。</li>
+          <li>直前の1手だけ「出したカードを手札に戻す」で取り消せます。</li>
+          <li>迷ったら「場をシャッフル」で場の開始文字を変更できます。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="toastBox"></div>
@@ -264,13 +292,13 @@
     gsap.to(clone[0], {
       x: to.left - from.left,
       y: to.top - from.top,
-      scale: 0.8,
-      rotation: 8,
-      duration: 0.42,
-      ease: 'power2.out',
+      scale: 0.85,
+      rotation: 5,
+      duration: 0.26,
+      ease: 'power2.inOut',
       onComplete: () => clone.remove()
     });
-    gsap.fromTo('#fieldChar', { scale: 1 }, { scale: 1.12, duration: 0.22, yoyo: true, repeat: 1, ease: 'power1.inOut', delay: 0.2 });
+    gsap.fromTo('#fieldChar', { scale: 1 }, { scale: 1.1, duration: 0.18, yoyo: true, repeat: 1, ease: 'power1.inOut', delay: 0.08 });
   }
 
   function animateReject() {
@@ -321,7 +349,21 @@
     if (!my) return $('#handBox').html('');
     const html = (my.hand || []).map((c, idx) => `<button class="char-card" data-char="${c}" data-idx="${idx}">${c}</button>`).join('');
     $('#handBox').html(html || '<span class="text-success">手札0枚！</span>');
-    $('#handBox').toggleClass('five-cards', (my.hand || []).length === 5);
+
+    const cards = my.hand || [];
+    if (state.selectedEndChar !== null && !cards.includes(state.selectedEndChar)) {
+      state.selectedEndChar = null;
+      state.selectedDom = null;
+      $('#selectedCharLabel').text('未選択');
+    }
+
+    if (state.selectedEndChar !== null) {
+      const preserved = $('#handBox .char-card').filter((_, el) => $(el).data('char') === state.selectedEndChar).first();
+      if (preserved.length) {
+        preserved.addClass('selected');
+        state.selectedDom = preserved[0];
+      }
+    }
 
     $('#handBox .char-card').on('click', function () {
       $('#handBox .char-card').removeClass('selected');
@@ -329,7 +371,7 @@
       state.selectedEndChar = $(this).data('char');
       state.selectedDom = this;
       $('#selectedCharLabel').text(state.selectedEndChar);
-      gsap.fromTo(this, { scale: 0.92 }, { scale: 1.05, duration: 0.2, yoyo: true, repeat: 1 });
+      gsap.fromTo(this, { scale: 0.94 }, { scale: 1.05, duration: 0.14, ease: 'power1.out' });
     });
   }
 
@@ -349,6 +391,7 @@
 
     const my = me();
     const currentHandCount = my?.hand?.length ?? null;
+    $('#playPanel').toggleClass('d-none', currentHandCount === 0);
     if (state.previousHandCount !== null && state.previousHandCount > 0 && currentHandCount === 0) {
       celebrateClear();
       toast('おめでとう！クリアです！', 'success');
@@ -367,7 +410,7 @@
       } catch (e) {
         toast('状態同期に失敗しました', 'warning');
       }
-    }, 1200);
+    }, 1000);
   }
 
   $('#createRoomBtn').on('click', async () => {
@@ -433,14 +476,27 @@
 
   $('#undoBtn').on('click', async () => {
     const actionId = state.roomState?.lastAction?.actionId;
-    if (!actionId) return toast('Undoできる直近手がありません');
+    if (!actionId) return toast('戻せる直近手がありません');
     try {
       const res = await api('undo_request', { roomId: state.roomId, playerId: state.myPlayerId, actionId });
       state.roomState = res.roomState;
-      toast('Undo成功', 'success');
+      toast('手札に戻しました', 'success');
       render();
     } catch (e) {
-      toast(`Undo不可: ${e.message}`);
+      toast(`取り消し不可: ${e.message}`);
+    }
+  });
+
+  $('#shuffleFieldBtn').on('click', async () => {
+    if (!state.roomState) return;
+    try {
+      const res = await api('shuffle_field', { roomId: state.roomId, playerId: state.myPlayerId });
+      state.roomState = res.roomState;
+      gsap.fromTo('#fieldChar', { rotate: -8, scale: 0.95 }, { rotate: 0, scale: 1, duration: 0.22, ease: 'back.out(1.8)' });
+      toast('場の開始文字をシャッフルしました', 'success');
+      render();
+    } catch (e) {
+      toast(`シャッフル不可: ${e.message}`);
     }
   });
 
