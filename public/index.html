@@ -31,7 +31,7 @@
 </head>
 <body>
 <div class="app-shell">
-  <h1 class="h3 mb-3"><i class="fa-solid fa-bolt"></i> ワードバスケット（オンライン早押し）</h1>
+  <h1 class="h3 mb-3"><i class="fa-solid fa-bolt"></i> ワードバスケット（オンライン）</h1>
 
   <section id="lobbyView" class="panel">
     <div class="mb-3">
@@ -91,11 +91,8 @@
     </div>
 
     <div class="panel">
-      <div class="small mb-2">選択中の終端文字: <span id="selectedCharLabel" class="fw-bold">未選択</span></div>
-      <div class="input-group">
-        <input id="wordInput" class="form-control" placeholder="ことばを入力" />
-        <button id="playBtn" class="btn btn-success">送信</button>
-      </div>
+      <div class="small mb-2">選択中カード: <span id="selectedCharLabel" class="fw-bold">未選択</span></div>
+      <button id="playBtn" class="btn btn-success w-100">決定（場に出す）</button>
     </div>
   </section>
 </div>
@@ -197,7 +194,7 @@
     $('#roomLabel').text(rs.roomId);
     $('#fieldChar').text(rs.currentChar || '?');
     $('#deckCountBadge').text(rs.deckCount || 0);
-    $('#lastPlay').text(rs.lastPlay ? `${rs.lastPlay.name}: 「${rs.lastPlay.word}」で成功` : 'まだ成功プレイはありません');
+    $('#lastPlay').text(rs.lastPlay ? `${rs.lastPlay.name}: 「${rs.lastPlay.endChar}」を場に出しました` : 'まだカードは出されていません');
     renderPlayers();
     renderHand();
   }
@@ -257,28 +254,21 @@
 
   $('#playBtn').on('click', async () => {
     if (!state.roomState) return;
-    const word = $('#wordInput').val().trim();
     if (!state.selectedEndChar) return toast('手札を選択してください');
-    if (!word) return toast('単語を入力してください');
     animatePlayToField();
     try {
       const res = await api('play_request', {
         roomId: state.roomId,
         playerId: state.myPlayerId,
-        endChar: state.selectedEndChar,
-        word
+        endChar: state.selectedEndChar
       });
       state.roomState = res.roomState;
-      toast('プレイ成功！', 'success');
+      toast('カードを出しました！', 'success');
     } catch (e) {
       animateReject();
       toast(`プレイ失敗: ${e.message}`);
     }
     render();
-  });
-
-  $('#wordInput').on('keypress', (ev) => {
-    if (ev.key === 'Enter') $('#playBtn').trigger('click');
   });
 
   $('#undoBtn').on('click', async () => {
