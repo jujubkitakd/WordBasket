@@ -107,13 +107,15 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script>
 (() => {
+  const appBase = location.pathname.replace(/[^/]*$/, '');
+  const apiUrl = `${appBase}api.php`;
   const state = {
-    ws: null,
     roomId: null,
     myPlayerId: null,
     roomState: null,
     selectedEndChar: null,
-    selectedDom: null
+    selectedDom: null,
+    pollTimer: null
   };
 
   function toast(message, tone='danger') {
@@ -122,60 +124,16 @@
     setTimeout(() => $('#' + id).fadeOut(300, () => $('#' + id).remove()), 1800);
   }
 
-  function connect() {
-    if (state.ws && state.ws.readyState <= 1) return;
-    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-    state.ws = new WebSocket(`${protocol}://${location.host}/ws`);
-
-    state.ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data);
-      const { type, payload } = msg;
-      if (type === 'room_created') {
-        $('#createdRoomText').text(`作成済みROOM: ${payload.roomId}`);
-        $('#roomInput').val(payload.roomId);
-        $('#copyRoomBtn').removeClass('d-none').data('room', payload.roomId);
-      } else if (type === 'join_ok') {
-        state.myPlayerId = payload.playerId;
-        state.roomState = payload.roomState;
-        state.roomId = payload.roomState.roomId;
-        location.hash = `#/room/${state.roomId}`;
-        render();
-      } else if (type === 'state_sync') {
-        state.roomState = payload.roomState;
-        render();
-      } else if (type === 'play_result') {
-        if (!payload.accepted) {
-          animateReject();
-          toast(`プレイ失敗: ${payload.reason}`);
-          if (payload.roomState) state.roomState = payload.roomState;
-        } else {
-          toast('プレイ成功！', 'success');
-          state.roomState = payload.roomState;
-        }
-        render();
-      } else if (type === 'undo_result') {
-        if (!payload.accepted) {
-          toast(`Undo不可: ${payload.reason}`);
-          if (payload.roomState) state.roomState = payload.roomState;
-        } else {
-          toast('Undo成功', 'success');
-          state.roomState = payload.roomState;
-        }
-        render();
-      } else if (type === 'room_full') {
-        toast(`ROOM ${payload.roomId} は満室です`);
-      } else if (type === 'error') {
-        toast(payload.message || 'エラー');
-      }
-    };
-
-    state.ws.onclose = () => toast('接続が切れました。再接続してください。', 'warning');
-  }
-
-  function send(type, payload) {
-    connect();
-    if (!state.ws || state.ws.readyState !== 1) return toast('接続待機中...');
-    state.ws.send(JSON.stringify({ type, payload }));
+  async function api(action, payload = {}) {
+    const roomPayload = state.roomId && !payload.roomId ? { ...payload, roomId: state.roomId } : payload;
+    const res = await fetch(`${apiUrl}?action=${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(roomPayload)
+    });
+    const data = await res.json();
+    if (!res.ok || data.ok === false) throw new Error(data.reason || data.error || 'API_ERROR');
+    return data;
   }
 
   function me() {
@@ -240,16 +198,39 @@
     $('#fieldChar').text(rs.currentChar || '?');
     $('#deckCountBadge').text(rs.deckCount || 0);
     $('#lastPlay').text(rs.lastPlay ? `${rs.lastPlay.name}: 「${rs.lastPlay.word}」で成功` : 'まだ成功プレイはありません');
-    if (rs.winner) {
-      toast(`勝者: ${rs.winner.name} さん`, 'success');
-    }
     renderPlayers();
     renderHand();
   }
 
-  $('#createRoomBtn').on('click', () => {
-    connect();
-    send('create_room', { name: $('#nameInput').val() });
+  function startPolling() {
+    if (state.pollTimer) clearInterval(state.pollTimer);
+    state.pollTimer = setInterval(async () => {
+      if (!state.roomId || !state.myPlayerId) return;
+      try {
+        const res = await api('get_state', { roomId: state.roomId, playerId: state.myPlayerId });
+        state.roomState = res.roomState;
+        render();
+      } catch (e) {
+        toast('状態同期に失敗しました', 'warning');
+      }
+    }, 1200);
+  }
+
+  $('#createRoomBtn').on('click', async () => {
+    try {
+      const res = await api('create_room', { name: $('#nameInput').val() });
+      state.roomId = res.roomId;
+      state.myPlayerId = res.playerId;
+      state.roomState = res.roomState;
+      $('#createdRoomText').text(`作成済みROOM: ${res.roomId}`);
+      $('#roomInput').val(res.roomId);
+      $('#copyRoomBtn').removeClass('d-none').data('room', res.roomId);
+      location.hash = `#/room/${res.roomId}`;
+      startPolling();
+      render();
+    } catch (e) {
+      toast(`作成失敗: ${e.message}`);
+    }
   });
 
   $('#copyRoomBtn').on('click', function () {
@@ -257,50 +238,76 @@
     navigator.clipboard.writeText(room).then(() => toast('コピーしました', 'success')).catch(() => toast('コピー失敗'));
   });
 
-  $('#joinRoomBtn').on('click', () => {
+  $('#joinRoomBtn').on('click', async () => {
     const roomId = String($('#roomInput').val() || '').replace(/\D/g, '').padStart(4, '0').slice(-4);
     const name = $('#nameInput').val();
     if (!/^\d{4}$/.test(roomId)) return toast('4桁数字で入力してください');
-    connect();
-    send('join_room', { roomId, name });
+    try {
+      const res = await api('join_room', { roomId, name });
+      state.roomId = roomId;
+      state.myPlayerId = res.playerId;
+      state.roomState = res.roomState;
+      location.hash = `#/room/${roomId}`;
+      startPolling();
+      render();
+    } catch (e) {
+      toast(`参加失敗: ${e.message}`);
+    }
   });
 
-  $('#playBtn').on('click', () => {
+  $('#playBtn').on('click', async () => {
     if (!state.roomState) return;
     const word = $('#wordInput').val().trim();
     if (!state.selectedEndChar) return toast('手札を選択してください');
     if (!word) return toast('単語を入力してください');
     animatePlayToField();
-    send('play_request', {
-      roomId: state.roomState.roomId,
-      playerId: state.myPlayerId,
-      endChar: state.selectedEndChar,
-      word
-    });
+    try {
+      const res = await api('play_request', {
+        roomId: state.roomId,
+        playerId: state.myPlayerId,
+        endChar: state.selectedEndChar,
+        word
+      });
+      state.roomState = res.roomState;
+      toast('プレイ成功！', 'success');
+    } catch (e) {
+      animateReject();
+      toast(`プレイ失敗: ${e.message}`);
+    }
+    render();
   });
 
   $('#wordInput').on('keypress', (ev) => {
     if (ev.key === 'Enter') $('#playBtn').trigger('click');
   });
 
-  $('#undoBtn').on('click', () => {
+  $('#undoBtn').on('click', async () => {
     const actionId = state.roomState?.lastAction?.actionId;
     if (!actionId) return toast('Undoできる直近手がありません');
-    send('undo_request', { roomId: state.roomId, playerId: state.myPlayerId, actionId });
+    try {
+      const res = await api('undo_request', { roomId: state.roomId, playerId: state.myPlayerId, actionId });
+      state.roomState = res.roomState;
+      toast('Undo成功', 'success');
+      render();
+    } catch (e) {
+      toast(`Undo不可: ${e.message}`);
+    }
   });
 
-  $('#leaveBtn').on('click', () => {
-    if (state.roomId && state.myPlayerId) send('leave_room', { roomId: state.roomId, playerId: state.myPlayerId });
+  $('#leaveBtn').on('click', async () => {
+    if (state.roomId && state.myPlayerId) {
+      try { await api('leave_room', { roomId: state.roomId, playerId: state.myPlayerId }); } catch (_) {}
+    }
     state.roomId = null;
     state.myPlayerId = null;
     state.roomState = null;
     state.selectedEndChar = null;
     state.selectedDom = null;
+    if (state.pollTimer) clearInterval(state.pollTimer);
     location.hash = '#/';
     render();
   });
 
-  connect();
   render();
 })();
 </script>
