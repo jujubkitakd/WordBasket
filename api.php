@@ -4,12 +4,12 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 const MAX_PLAYERS = 6;
-const INITIAL_HAND = 7;
+const INITIAL_HAND = 5;
 const DECK_BASE = [
   'あ','い','う','え','お','か','き','く','け','こ',
   'さ','し','す','せ','そ','た','ち','つ','て','と',
   'な','に','ぬ','ね','の','は','ひ','ふ','へ','ほ',
-  'ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ','を','ん'
+  'ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','ろ','わ','を'
 ];
 
 $DATA_DIR = __DIR__ . '/data/rooms';
@@ -46,12 +46,6 @@ function create_deck(): array {
     for ($i = 0; $i < 3; $i++) $deck = array_merge($deck, DECK_BASE);
     shuffle($deck);
     return $deck;
-}
-
-function mb_last_char(string $text): string {
-    $text = trim($text);
-    if ($text === '') return '';
-    return mb_substr($text, mb_strlen($text) - 1, 1);
 }
 
 function public_state(array $room, string $forPlayerId): array {
@@ -186,10 +180,8 @@ $result = with_room_lock($roomPath, function (&$room) use ($action, $payload) {
     }
 
     if ($action === 'play_request') {
-        $word = trim((string)($payload['word'] ?? ''));
         $endChar = trim((string)($payload['endChar'] ?? ''));
-        if ($word === '' || $endChar === '') return ['ok' => false, 'reason' => 'INVALID_PLAY', 'roomState' => public_state($room, $playerId)];
-        if (mb_last_char($word) !== $endChar) return ['ok' => false, 'reason' => 'WORD_END_MISMATCH', 'roomState' => public_state($room, $playerId)];
+        if ($endChar === '') return ['ok' => false, 'reason' => 'INVALID_PLAY', 'roomState' => public_state($room, $playerId)];
 
         $hand =& $state['players'][$idx]['hand'];
         $handPos = array_search($endChar, $hand, true);
@@ -205,13 +197,10 @@ $result = with_room_lock($roomPath, function (&$room) use ($action, $payload) {
         ];
 
         array_splice($hand, (int)$handPos, 1);
-        if ($state['deckIndex'] < count($state['deck'])) {
-            $hand[] = $state['deck'][$state['deckIndex']++];
-        }
 
         $state['currentChar'] = $endChar;
         $state['players'][$idx]['score']++;
-        $state['lastPlay'] = ['playerId' => $playerId, 'name' => $state['players'][$idx]['name'], 'word' => $word, 'endChar' => $endChar, 'at' => time()];
+        $state['lastPlay'] = ['playerId' => $playerId, 'name' => $state['players'][$idx]['name'], 'endChar' => $endChar, 'at' => time()];
         if (count($hand) === 0) {
             $state['winner'] = ['playerId' => $playerId, 'name' => $state['players'][$idx]['name']];
             $state['status'] = 'FINISHED';
