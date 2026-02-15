@@ -26,10 +26,19 @@
         repeating-linear-gradient(135deg, #ffeab2 0 16px, #ffe29a 16px 32px);
     }
     .app-shell { max-width: 980px; margin: 0 auto; padding: 16px; }
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
     .app-title {
       font-weight: 900;
       color: var(--wb-red);
       text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(33, 81, 200, 0.22);
+      margin-bottom: 0;
+      font-size: clamp(1.35rem, 4.6vw, 1.9rem);
     }
     .glass-btn {
       background: linear-gradient(135deg, var(--wb-red), var(--wb-orange-deep));
@@ -77,6 +86,10 @@
       box-shadow: 0 14px 20px rgba(239, 59, 45, .32);
     }
     .char-card.field { width: 84px; height: 108px; font-size: 42px; margin: 0 auto; min-height: 108px; }
+    .char-card.hand-card,
+    .char-card.hand-card:hover {
+      box-shadow: none;
+    }
     .deck-card {
       width: 84px;
       height: 108px;
@@ -91,8 +104,9 @@
       gap: 10px;
       flex-wrap: nowrap;
       padding: 8px;
-      width: fit-content;
-      margin: 0 auto;
+      width: 100%;
+      margin: 0;
+      overflow-x: auto;
     }
     .small-player { font-size: 0.9rem; }
     #toastBox { position: fixed; right: 12px; bottom: 12px; z-index: 9999; min-width: 220px; }
@@ -129,11 +143,21 @@
       border-radius: 999px;
       padding: 0;
     }
+    .text-link-btn {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      text-decoration: underline;
+      font-size: .92rem;
+    }
   </style>
 </head>
 <body>
 <div class="app-shell">
-  <h1 class="h3 mb-3 app-title"><i class="fa-solid fa-bolt"></i> ワードバスケット（オンライン）</h1>
+  <header class="app-header">
+    <h1 class="app-title"><i class="fa-solid fa-bolt"></i> ワードバスケット（オンライン）</h1>
+    <button id="helpBtn" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal" aria-label="ルール説明"><i class="fa-solid fa-circle-question"></i></button>
+  </header>
 
   <section id="lobbyView" class="panel">
     <div class="mb-3">
@@ -182,9 +206,6 @@
         </div>
         <div id="lastPlay" class="small text-muted">まだ成功プレイはありません</div>
         <div class="d-flex gap-2">
-          <button id="helpBtn" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal" aria-label="ルール説明"><i class="fa-solid fa-circle-question"></i></button>
-          <button id="undoBtn" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate-left"></i> 出したカードを手札に戻す</button>
-          <button id="shuffleFieldBtn" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-shuffle"></i> 場をシャッフル</button>
           <button id="leaveBtn" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-right-from-bracket"></i> 退室</button>
         </div>
       </div>
@@ -202,6 +223,9 @@
           <div id="fieldChar" class="char-card field">?</div>
         </div>
       </div>
+      <div class="text-center mt-2">
+        <button id="shuffleFieldBtn" class="text-link-btn text-warning"><i class="fa-solid fa-shuffle"></i> 場をシャッフル</button>
+      </div>
     </div>
 
     <div class="panel mb-3">
@@ -212,6 +236,9 @@
     <div class="panel" id="playPanel">
       <div class="small mb-2">選択中カード: <span id="selectedCharLabel" class="fw-bold">未選択</span></div>
       <button id="playBtn" class="btn btn-success w-100">決定（場に出す）</button>
+      <div class="text-center mt-2">
+        <button id="undoBtn" class="text-link-btn text-secondary"><i class="fa-solid fa-rotate-left"></i> 出したカードを手札に戻す</button>
+      </div>
     </div>
   </section>
 </div>
@@ -347,7 +374,7 @@
   function renderHand() {
     const my = me();
     if (!my) return $('#handBox').html('');
-    const html = (my.hand || []).map((c, idx) => `<button class="char-card" data-char="${c}" data-idx="${idx}">${c}</button>`).join('');
+    const html = (my.hand || []).map((c, idx) => `<button class="char-card hand-card" data-char="${c}" data-idx="${idx}">${c}</button>`).join('');
     $('#handBox').html(html || '<span class="text-success">手札0枚！</span>');
 
     const cards = my.hand || [];
