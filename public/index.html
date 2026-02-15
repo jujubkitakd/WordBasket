@@ -8,49 +8,159 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   <style>
-    body { background: #f6f8ff; color: #1b1f3b; }
+    :root {
+      --wb-orange: #ff9f1c;
+      --wb-orange-deep: #ff7a00;
+      --wb-red: #ef3b2d;
+      --wb-yellow: #ffd447;
+      --wb-blue: #2151c8;
+      --wb-green: #18b35f;
+      --wb-ink: #2a1f1b;
+    }
+    body {
+      min-height: 100vh;
+      color: var(--wb-ink);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(255, 212, 71, .55), transparent 35%),
+        radial-gradient(circle at 90% 8%, rgba(239, 59, 45, .2), transparent 35%),
+        repeating-linear-gradient(135deg, #ffeab2 0 16px, #ffe29a 16px 32px);
+    }
     .app-shell { max-width: 980px; margin: 0 auto; padding: 16px; }
-    .glass-btn { background: rgba(32, 81, 229, 0.88); border: 0; color: #fff; }
-    .panel { background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 3px 10px rgba(12,28,64,.08); }
+    .app-title {
+      font-weight: 900;
+      color: var(--wb-red);
+      text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(33, 81, 200, 0.35);
+    }
+    .glass-btn {
+      background: linear-gradient(135deg, var(--wb-red), var(--wb-orange-deep));
+      border: 0;
+      color: #fff;
+      font-weight: 700;
+    }
+    .panel {
+      background: rgba(255,255,255,0.95);
+      border-radius: 18px;
+      padding: 14px;
+      border: 3px solid rgba(255, 159, 28, 0.38);
+      box-shadow: 0 12px 28px rgba(128, 44, 0, .16);
+    }
+    .nav-tabs .nav-link {
+      color: #7a4200;
+      font-weight: 700;
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+    }
+    .nav-tabs .nav-link.active {
+      color: #fff;
+      background: linear-gradient(135deg, var(--wb-blue), #3f74f0);
+      border-color: transparent;
+    }
     .char-card {
-      min-width: 54px; min-height: 72px; border-radius: 12px;
-      border: 2px solid #d7dcf4; background: #fff; display: inline-flex;
-      justify-content: center; align-items: center; font-size: 28px; font-weight: 700;
-      cursor: pointer; margin-right: 8px;
+      min-width: clamp(60px, 15vw, 96px);
+      min-height: clamp(90px, 18vw, 118px);
+      border-radius: 16px;
+      border: 3px solid #ffd07d;
+      background: linear-gradient(160deg, #fffdfa, #fff2d0);
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 28px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 14px rgba(111, 61, 0, .18);
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .char-card.selected { border-color: #2051e5; transform: translateY(-3px); }
-    .char-card.field { width: 84px; height: 108px; font-size: 42px; margin: 0 auto; }
+    .char-card:hover { transform: translateY(-3px); box-shadow: 0 10px 16px rgba(111, 61, 0, .22); }
+    .char-card.selected {
+      border-color: var(--wb-red);
+      transform: translateY(-8px) scale(1.05);
+      box-shadow: 0 14px 20px rgba(239, 59, 45, .32);
+    }
+    .char-card.field { width: 84px; height: 108px; font-size: 42px; margin: 0 auto; min-height: 108px; }
     .deck-card {
-      width: 84px; height: 108px; border-radius: 12px; background: repeating-linear-gradient(45deg,#2543a9,#2543a9 10px,#365ddf 10px,#365ddf 20px);
-      margin: 0 auto; position: relative;
+      width: 84px;
+      height: 108px;
+      border-radius: 12px;
+      background: repeating-linear-gradient(45deg,var(--wb-blue),var(--wb-blue) 10px,#3b79f8 10px,#3b79f8 20px);
+      margin: 0 auto;
+      position: relative;
     }
-    .hand-scroll { overflow-x: auto; white-space: nowrap; padding-bottom: 6px; }
+    .hand-scroll {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: nowrap;
+      padding: 8px;
+    }
+    .hand-scroll.five-cards { justify-content: space-between; }
     .small-player { font-size: 0.9rem; }
     #toastBox { position: fixed; right: 12px; bottom: 12px; z-index: 9999; min-width: 220px; }
+    #playBtn { min-height: 56px; font-size: 1.06rem; font-weight: 700; }
+    #clearOverlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle, rgba(255, 244, 207, .94), rgba(255, 168, 50, .8));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 12000;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #clearOverlay .clear-message {
+      text-align: center;
+      color: #9e180d;
+      text-shadow: 2px 2px 0 #fff;
+    }
+    #clearOverlay .clear-message h2 { font-weight: 900; font-size: clamp(2rem, 8vw, 4rem); }
+    #clearOverlay .clear-message p { font-size: clamp(1rem, 3vw, 1.3rem); font-weight: 700; }
+    .confetti-piece {
+      position: fixed;
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      z-index: 12001;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
 <div class="app-shell">
-  <h1 class="h3 mb-3"><i class="fa-solid fa-bolt"></i> ワードバスケット（オンライン）</h1>
+  <h1 class="h3 mb-3 app-title"><i class="fa-solid fa-bolt"></i> ワードバスケット（オンライン）</h1>
 
   <section id="lobbyView" class="panel">
     <div class="mb-3">
       <label class="form-label">プレイヤー名</label>
       <input id="nameInput" class="form-control" maxlength="16" placeholder="なまえ" value="Player" />
     </div>
-    <div class="d-flex gap-2 mb-3">
-      <button id="createRoomBtn" class="btn glass-btn"><i class="fa-solid fa-plus"></i> 新規ルーム作成</button>
-      <button id="copyRoomBtn" class="btn btn-outline-primary d-none"><i class="fa-regular fa-copy"></i> ルームIDをコピー</button>
-    </div>
-    <div class="row g-2 align-items-end">
-      <div class="col-sm-4">
-        <label class="form-label">4桁ルームID</label>
-        <input id="roomInput" class="form-control" maxlength="4" placeholder="0123" />
+
+    <ul class="nav nav-tabs mb-3" id="roomTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="join-tab" data-bs-toggle="tab" data-bs-target="#joinPane" type="button" role="tab" aria-controls="joinPane" aria-selected="true">ルームに参加</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="create-tab" data-bs-toggle="tab" data-bs-target="#createPane" type="button" role="tab" aria-controls="createPane" aria-selected="false">ルームを作成</button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="joinPane" role="tabpanel" aria-labelledby="join-tab" tabindex="0">
+        <div class="row g-2 align-items-end">
+          <div class="col-sm-7">
+            <label class="form-label">4桁ルームID</label>
+            <input id="roomInput" class="form-control" maxlength="4" placeholder="0123" />
+          </div>
+          <div class="col-sm-5">
+            <button id="joinRoomBtn" class="btn btn-primary w-100"><i class="fa-solid fa-right-to-bracket"></i> 参加する</button>
+          </div>
+        </div>
       </div>
-      <div class="col-sm-3">
-        <button id="joinRoomBtn" class="btn btn-primary w-100">参加</button>
-      </div>
-      <div class="col-sm-5">
+
+      <div class="tab-pane fade" id="createPane" role="tabpanel" aria-labelledby="create-tab" tabindex="0">
+        <div class="d-grid d-sm-flex gap-2 mb-2">
+          <button id="createRoomBtn" class="btn glass-btn"><i class="fa-solid fa-plus"></i> 新規ルーム作成</button>
+          <button id="copyRoomBtn" class="btn btn-outline-primary d-none"><i class="fa-regular fa-copy"></i> ルームIDをコピー</button>
+        </div>
         <div id="createdRoomText" class="text-primary fw-bold"></div>
       </div>
     </div>
@@ -98,6 +208,12 @@
 </div>
 
 <div id="toastBox"></div>
+<div id="clearOverlay">
+  <div class="clear-message">
+    <h2>🎉 CLEAR! 🎉</h2>
+    <p>手札をすべて出し切りました！</p>
+  </div>
+</div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -112,7 +228,8 @@
     roomState: null,
     selectedEndChar: null,
     selectedDom: null,
-    pollTimer: null
+    pollTimer: null,
+    previousHandCount: null
   };
 
   function toast(message, tone='danger') {
@@ -148,15 +265,45 @@
       x: to.left - from.left,
       y: to.top - from.top,
       scale: 0.8,
-      duration: 0.35,
+      rotation: 8,
+      duration: 0.42,
       ease: 'power2.out',
       onComplete: () => clone.remove()
     });
+    gsap.fromTo('#fieldChar', { scale: 1 }, { scale: 1.12, duration: 0.22, yoyo: true, repeat: 1, ease: 'power1.inOut', delay: 0.2 });
   }
 
   function animateReject() {
     if (!state.selectedDom) return;
     gsap.fromTo(state.selectedDom, { x: 0 }, { x: 10, duration: 0.05, repeat: 3, yoyo: true });
+  }
+
+  function celebrateClear() {
+    const overlay = $('#clearOverlay');
+    overlay.css({ opacity: 0, pointerEvents: 'none' });
+    gsap.to(overlay[0], { opacity: 1, duration: 0.35, ease: 'power1.out' });
+    gsap.fromTo('.clear-message', { scale: 0.7, y: 18 }, { scale: 1, y: 0, duration: 0.45, ease: 'back.out(1.5)' });
+
+    const colors = ['#ef3b2d', '#ff9f1c', '#ffd447', '#2151c8', '#18b35f'];
+    for (let i = 0; i < 48; i++) {
+      const piece = $('<span class="confetti-piece"></span>').css({
+        left: `${Math.random() * window.innerWidth}px`,
+        top: '-20px',
+        backgroundColor: colors[Math.floor(Math.random() * colors.length)]
+      }).appendTo('body');
+      gsap.to(piece[0], {
+        y: window.innerHeight + 40,
+        x: (Math.random() - 0.5) * 220,
+        rotation: Math.random() * 540,
+        duration: 1.6 + Math.random() * 1.2,
+        ease: 'power1.in',
+        onComplete: () => piece.remove()
+      });
+    }
+
+    setTimeout(() => {
+      gsap.to(overlay[0], { opacity: 0, duration: 0.4, onComplete: () => overlay.css('pointerEvents', 'none') });
+    }, 1800);
   }
 
   function renderPlayers() {
@@ -174,6 +321,7 @@
     if (!my) return $('#handBox').html('');
     const html = (my.hand || []).map((c, idx) => `<button class="char-card" data-char="${c}" data-idx="${idx}">${c}</button>`).join('');
     $('#handBox').html(html || '<span class="text-success">手札0枚！</span>');
+    $('#handBox').toggleClass('five-cards', (my.hand || []).length === 5);
 
     $('#handBox .char-card').on('click', function () {
       $('#handBox .char-card').removeClass('selected');
@@ -181,6 +329,7 @@
       state.selectedEndChar = $(this).data('char');
       state.selectedDom = this;
       $('#selectedCharLabel').text(state.selectedEndChar);
+      gsap.fromTo(this, { scale: 0.92 }, { scale: 1.05, duration: 0.2, yoyo: true, repeat: 1 });
     });
   }
 
@@ -197,6 +346,14 @@
     $('#lastPlay').text(rs.lastPlay ? `${rs.lastPlay.name}: 「${rs.lastPlay.endChar}」を場に出しました` : 'まだカードは出されていません');
     renderPlayers();
     renderHand();
+
+    const my = me();
+    const currentHandCount = my?.hand?.length ?? null;
+    if (state.previousHandCount !== null && state.previousHandCount > 0 && currentHandCount === 0) {
+      celebrateClear();
+      toast('おめでとう！クリアです！', 'success');
+    }
+    state.previousHandCount = currentHandCount;
   }
 
   function startPolling() {
@@ -263,6 +420,9 @@
         endChar: state.selectedEndChar
       });
       state.roomState = res.roomState;
+      state.selectedEndChar = null;
+      state.selectedDom = null;
+      $('#selectedCharLabel').text('未選択');
       toast('カードを出しました！', 'success');
     } catch (e) {
       animateReject();
@@ -293,6 +453,7 @@
     state.roomState = null;
     state.selectedEndChar = null;
     state.selectedDom = null;
+    state.previousHandCount = null;
     if (state.pollTimer) clearInterval(state.pollTimer);
     location.hash = '#/';
     render();
