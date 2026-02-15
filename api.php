@@ -52,6 +52,16 @@ function random_char_card(): string {
     return DECK_BASE[random_int(0, count(DECK_BASE) - 1)];
 }
 
+function draw_unique_hand(array $deck, int &$deckIndex, int $count): array {
+    $hand = [];
+    while (count($hand) < $count && $deckIndex < count($deck)) {
+        $card = $deck[$deckIndex++];
+        if (in_array($card, $hand, true)) continue;
+        $hand[] = $card;
+    }
+    return $hand;
+}
+
 function public_state(array $room, string $forPlayerId): array {
     $players = array_map(function($p) use ($forPlayerId) {
         return [
@@ -111,7 +121,8 @@ if ($action === 'create_room') {
     $name = trim((string)($payload['name'] ?? 'Player'));
     $name = mb_substr($name !== '' ? $name : 'Player', 0, 16);
 
-    $hand = array_slice($deck, 1, INITIAL_HAND);
+    $deckIndex = 1;
+    $hand = draw_unique_hand($deck, $deckIndex, INITIAL_HAND);
     $room = [
         'roomId' => $roomId,
         'state' => [
@@ -125,7 +136,7 @@ if ($action === 'create_room') {
                 'score' => 0,
             ]],
             'deck' => $deck,
-            'deckIndex' => 1 + count($hand),
+            'deckIndex' => $deckIndex,
             'currentChar' => $deck[0],
             'lastPlay' => null,
             'winner' => null,
@@ -156,10 +167,7 @@ $result = with_room_lock($roomPath, function (&$room) use ($action, $payload) {
         $playerId = random_player_id();
         $name = trim((string)($payload['name'] ?? 'Player'));
         $name = mb_substr($name !== '' ? $name : 'Player', 0, 16);
-        $hand = [];
-        for ($i = 0; $i < INITIAL_HAND && $state['deckIndex'] < count($state['deck']); $i++) {
-            $hand[] = $state['deck'][$state['deckIndex']++];
-        }
+        $hand = draw_unique_hand($state['deck'], $state['deckIndex'], INITIAL_HAND);
         $state['players'][] = ['playerId' => $playerId, 'name' => $name, 'connected' => true, 'hand' => $hand, 'score' => 0];
         if (count($connected) + 1 >= 2) $state['status'] = 'ACTIVE';
         $state['stateVersion']++;
