@@ -65,8 +65,10 @@
       border-color: transparent;
     }
     .char-card {
-      min-width: clamp(60px, 15vw, 96px);
-      min-height: clamp(90px, 18vw, 118px);
+      width: clamp(54px, 14vw, 96px);
+      min-width: 0;
+      height: clamp(84px, 18vw, 118px);
+      min-height: 0;
       border-radius: 16px;
       border: 3px solid #ffd07d;
       background: linear-gradient(160deg, #fffdfa, #fff2d0);
@@ -82,7 +84,7 @@
     .char-card:hover { transform: translateY(-3px); box-shadow: 0 10px 16px rgba(111, 61, 0, .22); }
     .char-card.selected {
       border-color: var(--wb-red);
-      transform: translateY(-8px) scale(1.05);
+      transform: translateY(-8px) scale(1.03);
       box-shadow: 0 14px 20px rgba(239, 59, 45, .32);
     }
     .char-card.field { width: 84px; height: 108px; font-size: 42px; margin: 0 auto; min-height: 108px; }
@@ -101,12 +103,17 @@
     .hand-scroll {
       display: flex;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: nowrap;
-      padding: 8px;
+      padding: 12px 0 4px;
       width: 100%;
       margin: 0;
-      overflow-x: auto;
+      overflow-x: hidden;
+      overflow-y: visible;
+    }
+    .hand-scroll .hand-card {
+      flex: 1 1 0;
+      max-width: 92px;
     }
     .small-player { font-size: 0.9rem; }
     #toastBox { position: fixed; right: 12px; bottom: 12px; z-index: 9999; min-width: 220px; }
@@ -138,10 +145,21 @@
       pointer-events: none;
     }
     #helpBtn {
-      width: 32px;
-      height: 32px;
+      width: 44px;
+      height: 44px;
       border-radius: 999px;
       padding: 0;
+      border: 0;
+      background: transparent;
+      color: #0d6efd;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    #helpBtn i {
+      font-size: 34px;
+      line-height: 1;
     }
     .text-link-btn {
       border: 0;
@@ -156,7 +174,7 @@
 <div class="app-shell">
   <header class="app-header">
     <h1 class="app-title"><i class="fa-solid fa-bolt"></i> ワードバスケット（オンライン）</h1>
-    <button id="helpBtn" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal" aria-label="ルール説明"><i class="fa-solid fa-circle-question"></i></button>
+    <button id="helpBtn" type="button" data-bs-toggle="modal" data-bs-target="#helpModal" aria-label="ルール説明"><i class="fa-solid fa-circle-question"></i></button>
   </header>
 
   <section id="lobbyView" class="panel">
